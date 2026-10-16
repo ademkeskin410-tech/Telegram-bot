@@ -73,7 +73,7 @@ def main():
   app.add_handler(
       MessageHandler(filters.TEXT & (~filters.COMMAND), kufur_kontrol)
   )
-    keep_alive()
+  keep_alive()
   print("Bot çalışıyor...")
   app.run_polling()
 
