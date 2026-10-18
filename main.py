@@ -193,7 +193,7 @@ def main():
     init_db()
 
     # Doğrudan eklenen API Token
-    token = "8996494642:AAF3HC6lsJ2Mz1CJ2ZG8ejbjRbYPFEMhG80"
+    token = 8996494642:AAHTcJ04dW43KDdEEfUp-9Zqv9M_anbs2gI
 
     application = ApplicationBuilder().token(token).build()
 
