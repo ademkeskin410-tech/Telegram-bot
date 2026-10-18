@@ -1,82 +1,46 @@
-from flask import Flask
-from threading import Thread
-
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Bot aktif ve çalışıyor!"
-
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
+import os
 import logging
-from telegram import ChatPermissions, Update
-from telegram.ext import (
-    ApplicationBuilder,
-    ContextTypes,
-    MessageHandler,
-    filters,
-)
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-YASAKLI_KELIMELER = ["kufur1", "kufur2", "argo1"]
+# Yasaklı kelimeler (küfür / argo filtresi)
+BANNED_WORDS = ['sex', 'sik', 'amk', 'aq', 'oç', 'piç']
 
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+    
+    text = update.message.text.lower()
+    user = update.message.from_user
+    username = user.username or user.first_name
 
-async def yeni_uye_geldi(update: Update, context: ContextTypes.DEFAULT_TYPE):
-  for member in update.message.new_chat_members:
-    if member.id == context.bot.id:
-      continue
-    hos_geldin_mesaji = f"Selamün aleyküm {member.first_name}, hoş geldin!"
-    await update.message.reply_text(hos_geldin_mesaji)
+    # Küfür / Argo Filtresi
+    if any(banned in text for banned in BANNED_WORDS):
+        try:
+            await update.message.delete()
+            await update.message.reply_text(f"⚠️ @{username}, grupta bu tür ifadeler kullanmak yasaktır!")
+        except Exception as e:
+            logging.error(f"Mesaj silinemedi: {e}")
+        return
 
-
-async def kufur_kontrol(update: Update, context: ContextTypes.DEFAULT_TYPE):
-  if not update.message or not update.message.text:
-    return
-
-  mesaj_metni = update.message.text.lower()
-  user = update.message.from_user
-  chat = update.message.chat
-
-  for kelime in YASAKLI_KELIMELER:
-    if kelime in mesaj_metni:
-      try:
-        await update.message.delete()
-        kisitlama = ChatPermissions(can_send_messages=False)
-        await chat.restrict_member(
-            user.id, permissions=kisitlama, until_date=600
-        )
-        await chat.send_message(
-            f"@{user.username or user.first_name}, küfür/argo kullandığın"
-            " için 10 dakika susturuldun!"
-        )
-      except Exception as e:
-        print(f"Hata: {e}")
-      break
-
+    # Otomatik Karşılama ve Sohbet Yanıtları
+    if text in ['selam', 'sa', 'selamün aleyküm', 'selamun aleykum']:
+        await update.message.reply_text(f"Aleykümselam @{username}, hoş geldin! 👋")
+    elif text in ['naber', 'nabersın', 'nasılsın']:
+        await update.message.reply_text('İyiyim, teşekkür ederim! Sen nasılsın? 😊')
 
 def main():
-  TOKEN = "8838540653:AAFbAIKXJlVIHeDWQtTe4-tSUKgm85HepPY"
-  app = ApplicationBuilder().token(TOKEN).build()
+    # Doğrudan eklediğimiz token
+    token = "8996494642:AAF3HC6lsJ2Mz1CJ2ZG8ejbjRbYPFEMhG80"
 
-  app.add_handler(
-      MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, yeni_uye_geldi)
-  )
-  app.add_handler(
-      MessageHandler(filters.TEXT & (~filters.COMMAND), kufur_kontrol)
-  )
-    keep_alive()
-  print("Bot çalışıyor...")
-  app.run_polling()
+    application = ApplicationBuilder().token(token).build()
 
+    # Metin mesajlarını filtre ve yanıtlar için dinle
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
-if __name__ == "__main__":
-  main()
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
